@@ -30,28 +30,35 @@ class Decoder {
   /// [maxDepth] will define the maximum recursion  which can occurs on a decoding.
   int maxDepth;
 
+  /// [_zeroValues] contains default zero values for specified types
   Map<Type, dynamic> _zeroValues = Map.from(_baseZeroValues);
 
+  /// [registerZeroValues] allow external registration of default zero values
   void registerZeroValues(Type type, dynamic value) => _zeroValues[type] = value;
 
+  /// [decode] will return a new object of type [T] with its attributes mapped from [input]
   T decode<T>(Map<String, dynamic> input) {
     var r = reflectType(T);
     return _decode<T>(input, r.reflectedType, typeArgument: r.typeArguments);
   }
 
+  /// [decodeIn] will decode the input and map its values to [receiver]
   void decodeIn<T>(Map<String, dynamic> input, T receiver) {
     var reflectee = reflectType(T);
     _decodeIn<T>(input, receiver, typeArgument: reflectee.typeArguments);
   }
 
+  // [_decode] will manage instanciation of the receiving variable and call _decodeIn
   T _decode<T>(Map<String, dynamic> input, Type type, {List<TypeMirror> typeArgument = const []}) {
     if (type == dynamic) {
       return input as T;
     }
-    var receiver = zeroValueOfType(type);
+    var receiver = _zeroValueOfType(type);
     return _decodeIn<T>(input, receiver, typeArgument: typeArgument);
   }
 
+  // [_decodeIn] will iterate on each attributes of the receiver and call [_symbolLogic] to apply value\
+  // It will also have special case for Map<K, V> receiver.
   T _decodeIn<T>(Map<String, dynamic> input, T receiver, {List<TypeMirror> typeArgument = const []}) {
     if (input == null) {
       return receiver;
@@ -77,10 +84,10 @@ class Decoder {
     }
     var decl = reflectee.type.declarations;
     var targetName = this._sanitizeName(symbol);
-    var fromName = this._getFromName(getAnnotations<Tag>(decl[Symbol(targetName)]), targetName);
+    var fromName = this._getFromName(_getAnnotations<Tag>(decl[Symbol(targetName)]), targetName);
     if (!input.containsKey(fromName)) {
       if (zeroFields) {
-        _apply(reflectee, Symbol(targetName), zeroValueOfType(methodMirror.returnType.reflectedType));
+        _apply(reflectee, Symbol(targetName), _zeroValueOfType(methodMirror.returnType.reflectedType));
       }
       return;
     }
@@ -92,7 +99,7 @@ class Decoder {
         var rType = methodMirror.returnType;
         var val;
         if (field.reflectee == null) {
-          val = zeroValueOfType(rType.reflectedType);
+          val = _zeroValueOfType(rType.reflectedType);
         } else {
           val = field.reflectee;
         }
@@ -114,7 +121,7 @@ class Decoder {
 
   _apply(InstanceMirror instance, Symbol key, dynamic val) {
     if (zeroFields) {
-      val = zeroValue(val);
+      val = _zeroValue(val);
     }
     instance.setField(key, val);
   }
@@ -124,7 +131,7 @@ class Decoder {
     name = name.substring(0, name.length - 1);
     return name;
   }
-  
+
   String _getFromName(List<Tag> tag, String targetName) {
     for (var value in tag) {
       if (value.tag == this.tagName) {
@@ -135,7 +142,7 @@ class Decoder {
   }
 }
 
-List<T> getAnnotations<T>(DeclarationMirror declaration) {
+List<T> _getAnnotations<T>(DeclarationMirror declaration) {
   var res = <T>[];
   for (var instance in declaration.metadata) {
     if (instance.hasReflectee) {
@@ -149,7 +156,7 @@ List<T> getAnnotations<T>(DeclarationMirror declaration) {
   return res;
 }
 
-dynamic zeroValue(dynamic val) {
+dynamic _zeroValue(dynamic val) {
   if (val != null) {
     return val;
   }
@@ -157,7 +164,7 @@ dynamic zeroValue(dynamic val) {
   return r.newInstance(Symbol(""), []).reflectee;
 }
 
-dynamic zeroValueOfType(Type val) {
+dynamic _zeroValueOfType(Type val) {
   if (_baseZeroValues.containsKey(val)) {
     return _baseZeroValues[val];
   }
@@ -167,6 +174,7 @@ dynamic zeroValueOfType(Type val) {
   }
 }
 
+/// [InvalidType] is returned if the type of attribute can't be mapped from the input
 class InvalidType implements Exception {}
 
 /// [UnusedException] is an exception thrown when [Decoder.errorUnused] is activated and a key remain unused.
