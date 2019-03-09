@@ -4,3 +4,4 @@
 library dmap;
 
 export 'src/decode/decode.dart';
+export 'src/annotation.dart';

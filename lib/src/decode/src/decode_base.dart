@@ -1,5 +1,7 @@
 import 'dart:mirrors';
 
+import '../../annotation.dart';
+
 const _defaultTypes = <Type>[bool, int, double, String, Runes];
 var _baseZeroValues = <Type, dynamic>{
   int: 0,
@@ -69,6 +71,9 @@ class Decoder {
 
   // _symbolLogic will filter the symbol of class and retrieve the corresponding entry in the input
   _symbolLogic(Map<String, dynamic> input, InstanceMirror reflectee, Symbol symbol, MethodMirror methodMirror) {
+    print(methodMirror.simpleName.toString());
+    print(methodMirror.metadata);
+    print(getAnnotation<Tag>(methodMirror));
     if (!methodMirror.isSetter) {
       return;
     }
@@ -119,6 +124,19 @@ class Decoder {
     name = name.substring(0, name.length - 1);
     return name;
   }
+}
+
+T getAnnotation<T>(DeclarationMirror declaration) {
+  for (var instance in declaration.metadata) {
+    if (instance.hasReflectee) {
+      var reflectee = instance.reflectee;
+      if (reflectee.runtimeType == T) {
+        return reflectee;
+      }
+    }
+  }
+  
+  return null;
 }
 
 dynamic zeroValue(dynamic val) {
