@@ -14,7 +14,7 @@ var _baseZeroValues = <Type, dynamic>{
 /// Decoder define the configuration which will decode an dynamic object into a object
 class Decoder {
   Decoder({this.tagName = "dmap", this.errorUnused = false, this.zeroFields = false, this.errorUnknown = false});
-  
+
   /// [tagName] will define the name of the tag which will be used when decoding
   String tagName;
 
@@ -29,9 +29,9 @@ class Decoder {
 
   /// [maxDepth] will define the maximum recursion  which can occurs on a decoding.
   int maxDepth;
-  
+
   Map<Type, dynamic> _zeroValues = Map.from(_baseZeroValues);
-  
+
   void registerZeroValues(Type type, dynamic value) => _zeroValues[type] = value;
 
   T decode<T>(Map<String, dynamic> input) {
@@ -56,6 +56,7 @@ class Decoder {
     if (input == null) {
       return receiver;
     }
+    // Check if receiver is a map, if it is, we need to pass values and take typeArguments
     if (receiver is Map) {
       input.forEach((k, v) {
         receiver[k] = _decode(v, typeArgument[1].reflectedType);
@@ -71,24 +72,23 @@ class Decoder {
 
   // _symbolLogic will filter the symbol of class and retrieve the corresponding entry in the input
   _symbolLogic(Map<String, dynamic> input, InstanceMirror reflectee, Symbol symbol, MethodMirror methodMirror) {
-    print(methodMirror.simpleName.toString());
-    print(methodMirror.metadata);
-    print(getAnnotation<Tag>(methodMirror));
     if (!methodMirror.isSetter) {
       return;
     }
-    var name = this._sanitizeName(symbol);
-    if (!input.containsKey(name)) {
+    var decl = reflectee.type.declarations;
+    var targetName = this._sanitizeName(symbol);
+    var fromName = this._getFromName(getAnnotations<Tag>(decl[Symbol(targetName)]), targetName);
+    if (!input.containsKey(fromName)) {
       if (zeroFields) {
-        _apply(reflectee, Symbol(name), zeroValueOfType(methodMirror.returnType.reflectedType));
+        _apply(reflectee, Symbol(targetName), zeroValueOfType(methodMirror.returnType.reflectedType));
       }
       return;
     }
     try {
       if (_defaultTypes.contains(methodMirror.returnType.reflectedType)) {
-        _apply(reflectee, Symbol(name), input[name]);
+        _apply(reflectee, Symbol(targetName), input[fromName]);
       } else {
-        var field = reflectee.getField(Symbol(name));
+        var field = reflectee.getField(Symbol(targetName));
         var rType = methodMirror.returnType;
         var val;
         if (field.reflectee == null) {
@@ -97,12 +97,12 @@ class Decoder {
           val = field.reflectee;
         }
         if (rType.isSubtypeOf(reflectType(List))) {
-          (input[name] as Iterable).forEach((e) {
+          (input[fromName] as Iterable).forEach((e) {
             (val as List).add(_decode(input, rType.typeArguments.first.reflectedType));
           });
-          _apply(reflectee, Symbol(name), val);
+          _apply(reflectee, Symbol(targetName), val);
         } else {
-          _apply(reflectee, Symbol(name), this._decodeIn(input[name], val));
+          _apply(reflectee, Symbol(targetName), this._decodeIn(input[fromName], val));
         }
       }
     } on NoSuchMethodError {
@@ -124,19 +124,29 @@ class Decoder {
     name = name.substring(0, name.length - 1);
     return name;
   }
+  
+  String _getFromName(List<Tag> tag, String targetName) {
+    for (var value in tag) {
+      if (value.tag == this.tagName) {
+        return value.name;
+      }
+    }
+    return targetName;
+  }
 }
 
-T getAnnotation<T>(DeclarationMirror declaration) {
+List<T> getAnnotations<T>(DeclarationMirror declaration) {
+  var res = <T>[];
   for (var instance in declaration.metadata) {
     if (instance.hasReflectee) {
       var reflectee = instance.reflectee;
       if (reflectee.runtimeType == T) {
-        return reflectee;
+        res.add(reflectee);
       }
     }
   }
-  
-  return null;
+
+  return res;
 }
 
 dynamic zeroValue(dynamic val) {

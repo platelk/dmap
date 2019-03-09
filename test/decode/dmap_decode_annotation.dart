@@ -2,31 +2,32 @@ import 'package:dmap/dmap.dart';
 import 'package:test/test.dart';
 
 class User {
+	@Tag(tag: "alias", name: "name")
 	@Tag(name: "last_name")
 	String lastName;
+	@Tag(tag: "alias", name: "first")
 	@Tag(name: "first_name")
 	String firstName;
 	int age;
 }
 
-class Job {
-	User user;
-	String title;
-}
-
 void main() {
-	group("netsted object", () {
-		test("with nested object", () {
-			var job = decode<Job>({"title": "dev", "user": {"last_name": "doe", "first_name": "john"}});
-			expect(job.title, equals("dev"));
-			expect(job.user, isNotNull);
-			expect(job.user.lastName, "doe");
-			expect(job.user.firstName, "john");
+	group("simple annotation", () {
+		test("basic test", () {
+			var job = decode<User>({"last_name": "doe", "first_name": "john"});
+			expect(job.lastName, "doe");
+			expect(job.firstName, "john");
 		});
-		test("null nested object", () {
-			var job = decode<Job>({"title": "dev", "user": null});
-			expect(job.title, equals("dev"));
-			expect(job.user, isNotNull);
+	});
+	group("multiple annotation", () {
+		test("basic test", () {
+			var user = decode<User>({"last_name": "doe", "first_name": "john"});
+			expect(user.lastName, "doe");
+			expect(user.firstName, "john");
+			var dec = new Decoder(tagName: 'alias');
+			var user2 = dec.decode<User>({"name": "name1", "first": "first1"});
+			expect(user2.lastName, "name1");
+			expect(user2.firstName, "first1");
 		});
 	});
 }
