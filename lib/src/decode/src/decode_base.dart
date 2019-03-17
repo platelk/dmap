@@ -12,12 +12,16 @@ var _baseZeroValues = <Type, dynamic>{
 };
 
 /// [DecodeHook] is a function prototype which is called to
-typedef R DecodeHook<R>(Type from, Type to, dynamic data);
+typedef DecodeHook<R> = R Function(Type from, Type to, dynamic data);
 
 /// Decoder define the configuration which will decode an dynamic object into a object
 class Decoder {
   Decoder(
-      {this.tagName = "dmap", this.errorUnused = false, this.zeroFields = false, this.errorUnknown = false, this.hook});
+      {this.tagName = "dmap",
+      this.errorUnused = false,
+      this.zeroFields = false,
+      this.errorUnknown = false,
+      this.hook});
 
   /// [tagName] will define the name of the tag which will be used when decoding
   String tagName;
@@ -40,7 +44,8 @@ class Decoder {
   DecodeHook hook;
 
   /// [registerZeroValues] allow external registration of default zero values
-  void registerZeroValues(Type type, dynamic value) => _zeroValues[type] = value;
+  void registerZeroValues(Type type, dynamic value) =>
+      _zeroValues[type] = value;
 
   /// [decode] will return a new object of type [T] with its attributes mapped from [input]
   T decode<T>(Map<String, dynamic> input) {
@@ -55,7 +60,8 @@ class Decoder {
   }
 
   // [_decode] will manage instantiation of the receiving variable and call _decodeIn
-  T _decode<T>(Map<String, dynamic> input, Type type, {List<TypeMirror> typeArgument = const []}) {
+  T _decode<T>(Map<String, dynamic> input, Type type,
+      {List<TypeMirror> typeArgument = const []}) {
     if (type == dynamic) {
       return input as T;
     }
@@ -65,7 +71,8 @@ class Decoder {
 
   // [_decodeIn] will iterate on each attributes of the receiver and call [_symbolLogic] to apply value\
   // It will also have special case for Map<K, V> receiver.
-  T _decodeIn<T>(Map<String, dynamic> input, T receiver, {List<TypeMirror> typeArgument = const []}) {
+  T _decodeIn<T>(Map<String, dynamic> input, T receiver,
+      {List<TypeMirror> typeArgument = const []}) {
     if (input == null) {
       return receiver;
     }
@@ -84,24 +91,28 @@ class Decoder {
   }
 
   // _symbolLogic will filter the symbol of class and retrieve the corresponding entry in the input
-  _symbolLogic(Map<String, dynamic> input, InstanceMirror reflectee, Symbol symbol, MethodMirror methodMirror) {
+  _symbolLogic(Map<String, dynamic> input, InstanceMirror reflectee,
+      Symbol symbol, MethodMirror methodMirror) {
     if (!methodMirror.isSetter) {
       return;
     }
     var decl = reflectee.type.declarations;
     var targetName = this._sanitizeName(symbol);
-    var fromName = this._getFromName(_getAnnotations<Tag>(decl[Symbol(targetName)]), targetName);
+    var fromName = this._getFromName(
+        _getAnnotations<Tag>(decl[Symbol(targetName)]), targetName);
     var targetType = methodMirror.returnType;
     if (!input.containsKey(fromName)) {
       if (zeroFields) {
-        _apply(reflectee, Symbol(targetName), _zeroValueOfType(targetType.reflectedType));
+        _apply(reflectee, Symbol(targetName),
+            _zeroValueOfType(targetType.reflectedType));
       }
       return;
     }
     try {
       var inputValue = input[fromName];
       if (this.hook != null) {
-        inputValue = this.hook(inputValue?.runtimeType, targetType.reflectedType, input[fromName]);
+        inputValue = this.hook(
+            inputValue?.runtimeType, targetType.reflectedType, input[fromName]);
       }
       if (_defaultTypes.contains(targetType.reflectedType)) {
         _apply(reflectee, Symbol(targetName), inputValue);
@@ -118,11 +129,13 @@ class Decoder {
         }
         if (rType.isSubtypeOf(reflectType(List))) {
           (inputValue as Iterable).forEach((e) {
-            (val as List).add(_decode(e, rType.typeArguments.first.reflectedType));
+            (val as List)
+                .add(_decode(e, rType.typeArguments.first.reflectedType));
           });
           _apply(reflectee, Symbol(targetName), val);
         } else {
-          _apply(reflectee, Symbol(targetName), this._decodeIn(inputValue, val));
+          _apply(
+              reflectee, Symbol(targetName), this._decodeIn(inputValue, val));
         }
       }
     } on NoSuchMethodError {
