@@ -182,14 +182,6 @@ List<T> _getAnnotations<T>(DeclarationMirror declaration) {
   return res;
 }
 
-dynamic _zeroValue(dynamic val) {
-  if (val != null) {
-    return val;
-  }
-  var r = reflectClass(val);
-  return r.newInstance(Symbol(""), []).reflectee;
-}
-
 dynamic _zeroValueOfType(Type val) {
   if (_baseZeroValues.containsKey(val)) {
     return _baseZeroValues[val];

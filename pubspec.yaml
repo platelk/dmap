@@ -1,6 +1,9 @@
 name: dmap
-description: Library to map Map<String, dynamic> into Class
-version: 0.2.0
+description: >
+  Library to map Map<String, dynamic> into Class to allow to quickly bind what's come from json parsing.
+  It rely on mirrors.
+
+version: 0.2.1
 homepage: https://github.com/platelk/dmap
 author: PLATEL Kevin <platel.kevin@gmail.con>
 
