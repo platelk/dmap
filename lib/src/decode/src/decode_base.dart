@@ -11,9 +11,13 @@ var _baseZeroValues = <Type, dynamic>{
   bool: false,
 };
 
+/// [DecodeHook] is a function prototype which is called to
+typedef R DecodeHook<R>(Type from, Type to, dynamic data);
+
 /// Decoder define the configuration which will decode an dynamic object into a object
 class Decoder {
-  Decoder({this.tagName = "dmap", this.errorUnused = false, this.zeroFields = false, this.errorUnknown = false});
+  Decoder(
+      {this.tagName = "dmap", this.errorUnused = false, this.zeroFields = false, this.errorUnknown = false, this.hook});
 
   /// [tagName] will define the name of the tag which will be used when decoding
   String tagName;
@@ -33,6 +37,8 @@ class Decoder {
   /// [_zeroValues] contains default zero values for specified types
   Map<Type, dynamic> _zeroValues = Map.from(_baseZeroValues);
 
+  DecodeHook hook;
+
   /// [registerZeroValues] allow external registration of default zero values
   void registerZeroValues(Type type, dynamic value) => _zeroValues[type] = value;
 
@@ -48,7 +54,7 @@ class Decoder {
     _decodeIn<T>(input, receiver, typeArgument: reflectee.typeArguments);
   }
 
-  // [_decode] will manage instanciation of the receiving variable and call _decodeIn
+  // [_decode] will manage instantiation of the receiving variable and call _decodeIn
   T _decode<T>(Map<String, dynamic> input, Type type, {List<TypeMirror> typeArgument = const []}) {
     if (type == dynamic) {
       return input as T;
@@ -85,18 +91,25 @@ class Decoder {
     var decl = reflectee.type.declarations;
     var targetName = this._sanitizeName(symbol);
     var fromName = this._getFromName(_getAnnotations<Tag>(decl[Symbol(targetName)]), targetName);
+    var targetType = methodMirror.returnType;
     if (!input.containsKey(fromName)) {
       if (zeroFields) {
-        _apply(reflectee, Symbol(targetName), _zeroValueOfType(methodMirror.returnType.reflectedType));
+        _apply(reflectee, Symbol(targetName), _zeroValueOfType(targetType.reflectedType));
       }
       return;
     }
     try {
-      if (_defaultTypes.contains(methodMirror.returnType.reflectedType)) {
-        _apply(reflectee, Symbol(targetName), input[fromName]);
+      var inputValue = input[fromName];
+      if (this.hook != null) {
+        inputValue = this.hook(inputValue?.runtimeType, targetType.reflectedType, input[fromName]);
+      }
+      if (_defaultTypes.contains(targetType.reflectedType)) {
+        _apply(reflectee, Symbol(targetName), inputValue);
+      } else if (targetType.isSubtypeOf(reflectType(inputValue.runtimeType))) {
+        _apply(reflectee, Symbol(targetName), inputValue);
       } else {
         var field = reflectee.getField(Symbol(targetName));
-        var rType = methodMirror.returnType;
+        var rType = targetType;
         var val;
         if (field.reflectee == null) {
           val = _zeroValueOfType(rType.reflectedType);
@@ -104,12 +117,12 @@ class Decoder {
           val = field.reflectee;
         }
         if (rType.isSubtypeOf(reflectType(List))) {
-          (input[fromName] as Iterable).forEach((e) {
-            (val as List).add(_decode(input, rType.typeArguments.first.reflectedType));
+          (inputValue as Iterable).forEach((e) {
+            (val as List).add(_decode(e, rType.typeArguments.first.reflectedType));
           });
           _apply(reflectee, Symbol(targetName), val);
         } else {
-          _apply(reflectee, Symbol(targetName), this._decodeIn(input[fromName], val));
+          _apply(reflectee, Symbol(targetName), this._decodeIn(inputValue, val));
         }
       }
     } on NoSuchMethodError {
@@ -121,7 +134,7 @@ class Decoder {
 
   _apply(InstanceMirror instance, Symbol key, dynamic val) {
     if (zeroFields) {
-      val = _zeroValue(val);
+      val ??= _zeroValueOfType(instance.type.reflectedType);
     }
     instance.setField(key, val);
   }
