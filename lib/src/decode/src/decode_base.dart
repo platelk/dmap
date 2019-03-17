@@ -1,6 +1,7 @@
 import 'dart:mirrors';
 
-import '../../annotation.dart';
+
+import 'package:dmap/src/common/common.dart';
 
 const _defaultTypes = <Type>[bool, int, double, String, Runes];
 var _baseZeroValues = <Type, dynamic>{
@@ -99,7 +100,7 @@ class Decoder {
     var decl = reflectee.type.declarations;
     var targetName = this._sanitizeName(symbol);
     var fromName = this._getFromName(
-        _getAnnotations<Tag>(decl[Symbol(targetName)]), targetName);
+        getAnnotations<Tag>(decl[Symbol(targetName)]), targetName);
     var targetType = methodMirror.returnType;
     if (!input.containsKey(fromName)) {
       if (zeroFields) {
@@ -166,20 +167,6 @@ class Decoder {
     }
     return targetName;
   }
-}
-
-List<T> _getAnnotations<T>(DeclarationMirror declaration) {
-  var res = <T>[];
-  for (var instance in declaration.metadata) {
-    if (instance.hasReflectee) {
-      var reflectee = instance.reflectee;
-      if (reflectee.runtimeType == T) {
-        res.add(reflectee);
-      }
-    }
-  }
-
-  return res;
 }
 
 dynamic _zeroValueOfType(Type val) {
