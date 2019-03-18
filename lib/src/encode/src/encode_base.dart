@@ -6,7 +6,7 @@ import 'package:dmap/src/annotation/annotation.dart';
 const _defaultTypes = <Type>[bool, int, double, String, Runes];
 
 /// [EncodeHook] is a function prototype which is called to
-typedef EncodeHook<R> = R Function(Type from, Type to, dynamic data);
+typedef EncodeHook<R> = R Function(dynamic data);
 
 /// Encoder define the configuration which will encode an dynamic object into a object
 class Encoder {
@@ -60,6 +60,9 @@ class Encoder {
 		var fromName = this._getFromName(
 				getAnnotations<Tag>(decl[Symbol(targetName)]), targetName);
 		var input = reflectee.getField(Symbol(targetName)).reflectee;
+		if (this.hook != null) {
+			input = this.hook(input);
+		}
 		if (_defaultTypes.contains(input.runtimeType)) {
 			output[fromName] = input;
 		} else {

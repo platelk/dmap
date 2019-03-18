@@ -1,11 +1,12 @@
 # Dmap
 
-*dmap* is a simple library inspired by [mapstructure]() based on [mirrors] to allow simple (and not necessarly 
+*dmap* is a simple library inspired by [mapstructure](https://github.com/mitchellh/mapstructure) based on [mirrors] to allow simple (and not necessarly 
 efficient) mapping of a *Map<String, dynamic>* into a object or class
 
 ## Feature
 
 * Decode `Map<String, dynamic>` into `Class`
+* Encode `Class` into `Map<String, dynamic>`
 * Zero values handling to avoid null in nested fields
 * Hooks to transform types on parsing
 * Allow renaming
