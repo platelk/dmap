@@ -1,7 +1,7 @@
 import 'dart:mirrors';
 
-import 'package:dmap/src/common/common.dart';
-import 'package:dmap/src/common/src/tag_annotation.dart';
+import 'package:dmap/src/annotation/annotation.dart';
+
 
 const _defaultTypes = <Type>[bool, int, double, String, Runes];
 
